@@ -62,12 +62,19 @@ export default function AdminDashboard() {
     navigate('/');
   };
 
-  const handleDelete = (bookingId) => {
-    deleteStoredBooking(bookingId);
+  const handleDelete = async (id) => {
+  try {
+    await deleteStoredBooking(id);
+
     setBookings(prev =>
-      prev.filter(b => b.bookingId !== bookingId)
+      prev.filter(b => b.id !== id)
     );
-  };
+
+  } catch (error) {
+    console.error("Failed to delete booking:", error);
+    alert("Failed to delete booking.");
+  }
+};
 
   const getFilteredBookings = () => {
     if (filter === 'all') return bookings;
@@ -429,7 +436,7 @@ export default function AdminDashboard() {
 
                   <button
                     onClick={() =>
-                      handleDelete(booking.bookingId)
+                      handleDelete(booking.id)
                     }
                     className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
                   >
@@ -438,7 +445,7 @@ export default function AdminDashboard() {
 
                   <button
                     onClick={() =>
-                      handleDelete(booking.bookingId)
+                      handleDelete(booking.id)
                     }
                     className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
                   >

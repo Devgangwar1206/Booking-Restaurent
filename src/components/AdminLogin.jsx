@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Lock, LogIn, ChefHat } from 'lucide-react';
+import { adminLogin } from '../api/adminApi';
+
 
 export default function AdminLogin() {
   const [username, setUsername] = useState('');
@@ -19,16 +21,21 @@ export default function AdminLogin() {
     }
   }, [navigate]);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
 
-    // Hardcoded credentials for prototype
-    if (username === 'admin' && password === 'admin123') {
+    try {
+      await adminLogin(username, password);
+
       localStorage.setItem('rs_admin_auth', 'true');
+
       navigate('/admin');
-    } else {
-      setError('Invalid username or password');
+
+    } catch (error) {
+
+      setError(error.message || 'Invalid username or password');
+
     }
   };
 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Send, MapPin, Phone, Mail, Loader2, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { sendContactMessage } from '../api/contactApi';
 
 export default function Contact() {
   const [formData, setFormData] = useState({
@@ -12,17 +13,33 @@ export default function Contact() {
 
   const [status, setStatus] = useState('idle');
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setStatus('loading');
-    
-    // Mock API Call
-    setTimeout(() => {
-      setStatus('success');
-      setFormData({ name: '', email: '', phone: '', message: '' });
-    }, 1500);
-  };
+  const handleSubmit = async (e) => {
+  e.preventDefault();
 
+  setStatus('loading');
+
+  try {
+
+    await sendContactMessage(formData);
+
+    setStatus('success');
+
+    setFormData({
+      name: '',
+      email: '',
+      phone: '',
+      message: ''
+    });
+
+  } catch (error) {
+
+    console.error("Failed to send message:", error);
+
+    alert(error.message || "Failed to send message.");
+
+    setStatus('idle');
+  }
+};
   return (
     <section id="contact" className="py-24 bg-white relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
