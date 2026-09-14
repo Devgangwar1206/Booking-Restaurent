@@ -139,7 +139,7 @@ The admin portal communicates with the Spring Boot backend through REST APIs.
               └────────┬────────┘
                        │
                        ▼
-                 MySQL Database
+               PostgreSQL Database
 ```
 
 For the admin flow:
@@ -163,7 +163,7 @@ Authentication / Authorization
 Booking & Order Management
   │
   ▼
-MySQL
+PostgreSQL
 ```
 
 ---
@@ -181,7 +181,7 @@ MySQL
 | Motion       | UI animations               |
 | REST APIs    | Backend communication       |
 | Spring Boot  | Backend                     |
-| MySQL        | Database                    |
+| PostgreSQL   | Database                    |
 
 ---
 
@@ -328,7 +328,6 @@ Potential improvements include:
 * Customer authentication
 * Role-based admin permissions
 * Image optimization
-* Production deployment
 
 ---
 
