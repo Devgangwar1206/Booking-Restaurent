@@ -16,6 +16,8 @@ import com.dev.booking.dto.UpdateRequestdto;
 import com.dev.booking.dto.UpdateResponsedto;
 import com.dev.booking.entity.Booking;
 import com.dev.booking.entity.BookingItem;
+import com.dev.booking.exception.DuplicateResourceException;
+import com.dev.booking.exception.ResourceNotFoundException;
 import com.dev.booking.repository.BookingRepository;
 
 @Service
@@ -29,11 +31,11 @@ public class Bookingservice {
 		Booking booking = maptoEntity(bookingdto);
 		
 		
-//		if(emailExists(booking)) {
-//			throw new DuplicateResourceException("Booking with email " + booking.getEmail()
-//            + " already exists");
-//		}
-//		
+		if(bookingrepo.existsByEmail(booking.getEmail())) {
+			throw new DuplicateResourceException("Booking with email " + booking.getEmail()
+            + " already exists");
+		}
+		
 		
 		booking.setBookingId(
 		        "BK-" + UUID.randomUUID()
@@ -50,22 +52,20 @@ public class Bookingservice {
 		
 	}
 	
-//	
-//	private boolean emailExists(Booking booking) {
-//        return bookingrepo.existsByEmail(booking.getEmail());
-//    }
-
-	
 	
 
-
-	public Booking getbookbyid(Long id) {
-		Optional<Booking> getbookingbyid = bookingrepo.findById(id);
+	public CreateResponsedto getbookbyid(Long id) {
+		Booking getbookingbyid = bookingrepo
+									.findById(id)
+									.orElseThrow(() -> 
+									new ResourceNotFoundException("Booking with id " + id + " not found"));
+									
+									
+//		if(getbookingbyid.isEmpty()) return null;
 		
-		if(getbookingbyid.isEmpty()) return null;
-		
-		return getbookingbyid.get();
+		return maptodto(getbookingbyid);
 	}
+	
 	
 	public List<CreateResponsedto> getallbookingdto() {
 
@@ -85,12 +85,13 @@ public class Bookingservice {
 
 	public UpdateResponsedto updatebook(UpdateRequestdto newbooking , Long id) {
 		
-		Optional<Booking> optionalBooking = bookingrepo.findById(id);
+		Booking optionalBooking = bookingrepo.findById(id)
+												.orElseThrow(() ->
+													new ResourceNotFoundException("Student with id " + id + " not found"));
 		
-		if(optionalBooking.isEmpty()) return null;
-		 
-		 
-		 Booking currbooking = optionalBooking.get();
+//		if(optionalBooking.isEmpty()) return null;
+		
+		 Booking currbooking = optionalBooking;
 
 		    currbooking.setFullName(newbooking.getFullName());
 		    currbooking.setEmail(newbooking.getEmail());
@@ -107,6 +108,21 @@ public class Bookingservice {
 		    UpdateResponsedto updatedResponsedto =maptoUpdatedResponsedto(currbooking);
 		    return updatedResponsedto;
 	}
+	
+	
+
+	public Boolean deletebookings(Long id) {
+		Booking getbooking = bookingrepo
+									.findById(id)
+									.orElseThrow(() -> 
+													new ResourceNotFoundException("Student with id " + id + " not found"));
+		
+//		if(getbooking.isEmpty()) return false;
+		
+		bookingrepo.deleteById(id);
+		return true;
+	}
+	
 
 
 	private UpdateResponsedto maptoUpdatedResponsedto(Booking currbooking) {
@@ -129,20 +145,6 @@ public class Bookingservice {
 		return updatedresponsedto;
 		
 	}
-
-
-
-
-
-	public Boolean deletebookings(Long id) {
-		Optional<Booking> getbooking = bookingrepo.findById(id);
-		
-		if(getbooking.isEmpty()) return false;
-		
-		bookingrepo.deleteById(id);
-		return true;
-	}
-	
 	
 	
 	

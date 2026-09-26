@@ -24,7 +24,6 @@ import com.dev.booking.service.Bookingservice;
 import jakarta.validation.Valid;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:5173")
 public class Bookingcontroller {
 	
 	@Autowired
@@ -46,9 +45,13 @@ public class Bookingcontroller {
 	}
 	
 	@GetMapping("/read/{id}")
-	public ResponseEntity<Booking> getbooking(@PathVariable Long id) {
-		Booking getbooking = bookingservice.getbookbyid(id);
-		return ResponseEntity.ok(getbooking);
+	public ResponseEntity<CreateResponsedto> getbooking(@PathVariable Long id) {
+		CreateResponsedto getbooking = bookingservice.getbookbyid(id);
+//		  if (getbooking == null) {
+//		        return ResponseEntity.notFound().build();
+//		    }
+
+		    return ResponseEntity.ok(getbooking);
 	}
 	
 	@GetMapping("/read")
@@ -64,9 +67,9 @@ public class Bookingcontroller {
 	public ResponseEntity<UpdateResponsedto> updatebooking(@RequestBody UpdateRequestdto newbooking ,@PathVariable Long id) {
 		UpdateResponsedto updatedbooking = bookingservice.updatebook(newbooking , id);
 		
-		
 		return ResponseEntity.ok(updatedbooking);
 	}
+	
 	
 	@DeleteMapping("/delete/{id}")
 	public ResponseEntity<String> deletebooking(@PathVariable Long id) {
