@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Lock, LogIn, ChefHat } from 'lucide-react';
-import { adminLogin } from '../api/adminApi';
-
+import API_URL from "../api/apiConfig";
 
 export default function AdminLogin() {
   const [username, setUsername] = useState('');
@@ -12,32 +11,54 @@ export default function AdminLogin() {
 
   const navigate = useNavigate();
 
-  useEffect(() => {
-    // If already logged in, redirect to admin dashboard
-    const isLoggedIn = localStorage.getItem('rs_admin_auth');
 
-    if (isLoggedIn === 'true') {
-      navigate('/admin');
+
+    const handleLogin = async (e) => {
+
+  e.preventDefault();
+
+  try {
+
+    const response = await fetch(
+      `${API_URL}/admin/login`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          username,
+          password
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (response.ok) {
+
+      console.log("Login successful");
+
+      localStorage.setItem("adminToken", data.token);
+
+      navigate("/dashboard");
+
+    } else {
+
+      console.log("Login failed:", data);
+
+      setError("Invalid username or password");
+
     }
-  }, [navigate]);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setError('');
+  } catch (error) {
 
-    try {
-      await adminLogin(username, password);
+    console.error("Login error:", error);
 
-      localStorage.setItem('rs_admin_auth', 'true');
+    setError("Something went wrong. Please try again.");
 
-      navigate('/admin');
-
-    } catch (error) {
-
-      setError(error.message || 'Invalid username or password');
-
-    }
-  };
+  }
+};
 
   return (
     <div className="min-h-screen bg-brand-charcoal flex items-center justify-center p-4 relative overflow-hidden">

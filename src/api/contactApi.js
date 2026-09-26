@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:8050";
+import API_URL from "./apiConfig";
 
 export async function sendContactMessage(data) {
 

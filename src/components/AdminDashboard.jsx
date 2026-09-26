@@ -18,27 +18,17 @@ import {
 import { motion } from 'motion/react';
 
 export default function AdminDashboard() {
-  const navigate = useNavigate();
 
   const [bookings, setBookings] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState('all');
 
   useEffect(() => {
-  // Check authentication
-  const isLoggedIn = localStorage.getItem('rs_admin_auth');
 
-  if (isLoggedIn !== 'true') {
-    navigate('/admin/login');
-    return;
-  }
-
-  // Load bookings
   const loadBookings = async () => {
     try {
       const loadedBookings = await getStoredBookings();
 
-      // Sort by newest first
       loadedBookings.sort(
         (a, b) =>
           new Date(b.createdAt).getTime() -
@@ -46,22 +36,30 @@ export default function AdminDashboard() {
       );
 
       setBookings(loadedBookings);
+
     } catch (error) {
       console.error('Failed to load bookings:', error);
       setBookings([]);
+
     } finally {
       setIsLoading(false);
     }
   };
 
   loadBookings();
-}, [navigate]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('rs_admin_auth');
-    navigate('/');
-  };
+}, []);
 
+  
+
+ const handleLogout = () => {
+
+  localStorage.removeItem("adminToken");
+
+  window.location.href = "/";
+
+};
+  
   const handleDelete = async (id) => {
   try {
     await deleteStoredBooking(id);

@@ -1,85 +1,5 @@
-// export async function bookTable(data) {
-//   // Simulate network request
-//   return new Promise((resolve, reject) => {
-//     setTimeout(() => {
-//       // Basic mock validation
-//       if (
-//         !data.fullName ||
-//         !data.email ||
-//         !data.phone ||
-//         !data.date ||
-//         !data.time ||
-//         !data.guests
-//       ) {
-//         reject(new Error("Missing required fields."));
-//         return;
-//       }
-
-//       const bookingId = `RS-${new Date().getFullYear()}-${Math.floor(
-//         1000 + Math.random() * 9000
-//       )}`;
-
-//       const newBooking = {
-//         ...data,
-//         bookingId,
-//         createdAt: new Date().toISOString(),
-//       };
-
-//       // Save to localStorage for Admin portal
-//       if (typeof window !== "undefined") {
-//         const existing = localStorage.getItem("rs_admin_bookings");
-
-//         const bookings = existing ? JSON.parse(existing) : [];
-
-//         bookings.push(newBooking);
-
-//         localStorage.setItem(
-//           "rs_admin_bookings",
-//           JSON.stringify(bookings)
-//         );
-//       }
-
-//       resolve({
-//         success: true,
-//         bookingId,
-//         message: "Table Reserved Successfully!",
-//       });
-//     }, 1500);
-//   });
-// }
-
-// export function getStoredBookings() {
-//   if (typeof window !== "undefined") {
-//     const existing = localStorage.getItem("rs_admin_bookings");
-
-//     if (existing) {
-//       return JSON.parse(existing);
-//     }
-//   }
-
-//   return [];
-// }
-
-// export function deleteStoredBooking(bookingId) {
-//   if (typeof window !== "undefined") {
-//     const existing = localStorage.getItem("rs_admin_bookings");
-
-//     if (existing) {
-//       let bookings = JSON.parse(existing);
-
-//       bookings = bookings.filter(
-//         (b) => b.bookingId !== bookingId
-//       );
-
-//       localStorage.setItem(
-//         "rs_admin_bookings",
-//         JSON.stringify(bookings)
-//       );
-//     }
-//   }
-// }
-
-const API_URL = "http://localhost:8050";
+import API_URL from "./apiConfig";
+import { authFetch } from "./authFetch";
 
 
 // CREATE BOOKING
@@ -100,6 +20,7 @@ export async function bookTable(data) {
     let errorMessage = "Failed to create booking.";
 
     try {
+
       const errorData = await response.json();
 
       if (errorData.message) {
@@ -126,7 +47,13 @@ export async function bookTable(data) {
 // GET ALL BOOKINGS
 export async function getStoredBookings() {
 
-  const response = await fetch(`${API_URL}/read`);
+  const response = await authFetch("/read", {
+    method: "GET",
+  });
+
+  if (!response) {
+    throw new Error("Authentication failed.");
+  }
 
   if (!response.ok) {
     throw new Error("Failed to fetch bookings.");
@@ -139,7 +66,13 @@ export async function getStoredBookings() {
 // GET SINGLE BOOKING
 export async function getBookingById(id) {
 
-  const response = await fetch(`${API_URL}/read/${id}`);
+  const response = await authFetch(`/read/${id}`, {
+    method: "GET",
+  });
+
+  if (!response) {
+    throw new Error("Authentication failed.");
+  }
 
   if (!response.ok) {
     throw new Error("Failed to fetch booking.");
@@ -152,9 +85,13 @@ export async function getBookingById(id) {
 // DELETE BOOKING
 export async function deleteStoredBooking(id) {
 
-  const response = await fetch(`${API_URL}/delete/${id}`, {
+  const response = await authFetch(`/delete/${id}`, {
     method: "DELETE",
   });
+
+  if (!response) {
+    throw new Error("Authentication failed.");
+  }
 
   if (!response.ok) {
     throw new Error("Failed to delete booking.");

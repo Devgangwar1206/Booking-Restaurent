@@ -15,9 +15,9 @@ import Testimonials from './components/Testimonials'
 import Contact from './components/Contact'
 import Footer from './components/Footer'
 import CartSidebar from './components/CartSidebar'
-import AdminLogin from './components/AdminLogin'
 import AdminDashboard from './components/AdminDashboard'
-
+import AdminLogin from './components/AdminLogin';
+import ProtectedRoute from './components/ProtectedRoute';
 function RestaurantHome() {
   return (
     <main className="min-h-screen">
@@ -41,9 +41,15 @@ export default function App() {
       {/* Main Website */}
       <Route path="/" element={<RestaurantHome />} />
 
-      {/* Admin */}
-      <Route path="/admin/login" element={<AdminLogin />} />
-      <Route path="/admin" element={<AdminDashboard />} />
+      {/* Protected Routes */}
+                <Route element={<ProtectedRoute />}>
+
+     <Route path="/dashboard" element={<AdminDashboard />}/>
+     </Route>
+
+     <Route path="/login" element={<AdminLogin />}/>
+
+
     </Routes>
   );
 }

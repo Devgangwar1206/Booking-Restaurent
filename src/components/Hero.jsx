@@ -1,5 +1,6 @@
 import { motion } from 'motion/react';
 import { Clock, MapPin } from 'lucide-react';
+import { heroimg } from '../assets/assets';
 
 export default function Hero() {
   return (
@@ -7,7 +8,7 @@ export default function Hero() {
       {/* Background Image with Overlay */}
       <div
         className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: 'url("https://picsum.photos/seed/indianrestaurant/1920/1080")' }}
+        style={{ backgroundImage:  `url(${heroimg})` }}
       >
         <div className="absolute inset-0 bg-linear-to-b from-brand-charcoal/80 via-brand-charcoal/60 to-brand-charcoal/90"></div>
       </div>

@@ -32,6 +32,7 @@ import dininghall from './dininghall.jpg';
 import family from './familiy.jpg';
 import spice from './spice.jpg';
 import nightcafe from './nightcafe.jpg';
+import heroimg from './heroimg.jpg';
 
 export {
   Dalmakni,
@@ -66,4 +67,5 @@ export {
   family,
   spice,
   nightcafe,
+  heroimg,
 };
