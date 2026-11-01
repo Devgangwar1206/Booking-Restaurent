@@ -52,6 +52,7 @@ export default function TableReservationWidget({
     clearActiveHold,
     selectedTable,
     setSelectedTable,
+    isBookingOpen,
     bookingStep: currentStep,
     setBookingStep: setCurrentStep,
   } = useTableHold();
