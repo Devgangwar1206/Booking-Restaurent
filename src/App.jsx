@@ -35,21 +35,38 @@ function RestaurantHome() {
     </main>
   )
 }
+import CuteHoldClock from './components/CuteHoldClock';
+import { useTableHold } from './context/TableHoldContext';
+
 export default function App() {
+  const { activeHold, clearActiveHold, isBookingOpen, openBooking, selectedTable } = useTableHold();
+
   return (
-    <Routes>
-      {/* Main Website */}
-      <Route path="/" element={<RestaurantHome />} />
+    <>
+      {/* GLOBAL 5-MINUTE LIVE COUNTDOWN CLOCK - Stays visible everywhere on website */}
+      {activeHold && (
+        <CuteHoldClock
+          expiresAt={activeHold.expiresAt}
+          tableNumber={activeHold.tableNumber || selectedTable?.tableNumber || `Table`}
+          tableName={activeHold.tableName || selectedTable?.name || 'Dining Table'}
+          onExpire={clearActiveHold}
+          totalDurationSeconds={300}
+          isOutsideForm={!isBookingOpen}
+          onResumeBooking={() => openBooking('CART_REVIEW')}
+        />
+      )}
 
-      {/* Protected Routes */}
-                <Route element={<ProtectedRoute />}>
+      <Routes>
+        {/* Main Website */}
+        <Route path="/" element={<RestaurantHome />} />
 
-     <Route path="/dashboard" element={<AdminDashboard />}/>
-     </Route>
+        {/* Protected Routes */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/dashboard" element={<AdminDashboard />}/>
+        </Route>
 
-     <Route path="/login" element={<AdminLogin />}/>
-
-
-    </Routes>
+        <Route path="/login" element={<AdminLogin />}/>
+      </Routes>
+    </>
   );
 }

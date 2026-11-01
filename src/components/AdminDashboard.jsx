@@ -283,16 +283,12 @@ export default function AdminDashboard() {
                         Customer
                       </p>
 
-                      <p className="font-bold text-brand-charcoal">
+                      <p className="font-bold text-brand-charcoal text-base">
                         {booking.fullName}
                       </p>
 
-                      <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
-                        <Phone size={14} /> {booking.phone}
-                      </div>
-
-                      <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
-                        <Mail size={14} /> {booking.email}
+                      <div className="flex items-center gap-2 text-sm text-gray-600 mt-1 font-medium">
+                        <Phone size={14} className="text-brand-gold shrink-0" /> {booking.phone}
                       </div>
                     </div>
 
@@ -408,20 +404,45 @@ export default function AdminDashboard() {
                             ))}
                           </ul>
 
-                          <div className="pt-3 border-t border-gray-200 text-sm font-bold text-brand-charcoal flex justify-between">
-                            <span>Total</span>
+                          {(() => {
+                            const subtotal = booking.cartItems.reduce(
+                              (total, item) =>
+                                total + ((item.price || 0) * item.quantity),
+                              0
+                            );
+                            const gstCharges = 40;
+                            const restaurantCharges = 35;
+                            const grandTotal = subtotal + gstCharges + restaurantCharges;
 
-                            <span className="text-brand-gold">
-                              ₹
-                              {booking.cartItems.reduce(
-                                (total, item) =>
-                                  total +
-                                  ((item.price || 0) *
-                                    item.quantity),
-                                0
-                              )}
-                            </span>
-                          </div>
+                            return (
+                              <div className="pt-3 border-t border-gray-200 space-y-1.5 text-xs text-gray-600">
+                                <div className="flex justify-between">
+                                  <span>Items Subtotal:</span>
+                                  <span className="font-semibold text-brand-charcoal font-mono">
+                                    ₹{subtotal.toLocaleString('en-IN')}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>GST & Govt Taxes (5%):</span>
+                                  <span className="font-semibold text-brand-charcoal font-mono">
+                                    +₹{gstCharges}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Restaurant Charges & Service:</span>
+                                  <span className="font-semibold text-brand-charcoal font-mono">
+                                    +₹{restaurantCharges}
+                                  </span>
+                                </div>
+                                <div className="pt-2 border-t border-dashed border-gray-300 flex justify-between items-baseline text-sm font-bold text-brand-charcoal">
+                                  <span>Total Bill Amount:</span>
+                                  <span className="text-base text-brand-gold font-mono font-black">
+                                    ₹{grandTotal.toLocaleString('en-IN')}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })()}
 
                         </div>
                       </div>

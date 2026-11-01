@@ -6,19 +6,20 @@ export function CartProvider({ children }) {
   const [cartItems, setCartItems] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
-  const addToCart = (item) => {
+  const addToCart = (item, quantity = 1) => {
+    const qtyToAdd = Math.max(1, Number(quantity) || 1);
     setCartItems(prev => {
       const existingItem = prev.find(i => i.menuItem.id === item.id);
 
       if (existingItem) {
         return prev.map(i =>
           i.menuItem.id === item.id
-            ? { ...i, quantity: i.quantity + 1 }
+            ? { ...i, quantity: i.quantity + qtyToAdd }
             : i
         );
       }
 
-      return [...prev, { menuItem: item, quantity: 1 }];
+      return [...prev, { menuItem: item, quantity: qtyToAdd }];
     });
 
     setIsCartOpen(true); // Auto-open cart when adding item

@@ -1,534 +1,135 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Calendar, Users, Clock, CheckCircle2, Loader2, Info, ShoppingBag } from 'lucide-react';
-import { bookTable } from '../api/bookingApi';
-import { useCart } from '../context/CartContext';
+import {
+  Calendar,
+  ArrowRight,
+  ShieldCheck,
+  Utensils,
+} from 'lucide-react';
+import TableReservationWidget from './TableReservationWidget';
+import LuxuryAmbientBackground from './LuxuryAmbientBackground';
+import { useTableHold } from '../context/TableHoldContext';
 
 export default function BookingSection() {
-  const { cartItems, cartTotal, clearCart } = useCart();
+  const { isBookingOpen, setIsBookingOpen, openBooking, formData, setFormData } = useTableHold();
+  const [ambientMood, setAmbientMood] = useState('champagne');
 
-  const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    date: '',
-    time: '',
-    guests: 2,
-    tablePreference: 'No Preference',
-    specialRequest: '',
-    orderPreference: 'dine-in'
-  });
-
-  const [status, setStatus] = useState('idle');
-  const [bookingId, setBookingId] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
-
-  // Auto-set orderPreference to preorder if cart has items and it was untouched
+  // Sync body class and trigger custom event to completely hide outer website header (Navbar)
   useEffect(() => {
-    if (cartItems.length > 0 && formData.orderPreference === 'dine-in') {
-      setFormData(prev => ({ ...prev, orderPreference: 'preorder' }));
-    } else if (cartItems.length === 0) {
-      setFormData(prev => ({ ...prev, orderPreference: 'dine-in' }));
+    if (isBookingOpen) {
+      document.body.classList.add('booking-active');
+    } else {
+      document.body.classList.remove('booking-active');
     }
-  }, [cartItems.length]);
+    window.dispatchEvent(new Event('bookingStateChange'));
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setStatus('loading');
-    setErrorMessage('');
-
-    try {
-      const submissionData = {
-        ...formData,
-        cartItems:
-          formData.orderPreference === 'preorder'
-            ? cartItems.map(item => ({
-                id: item.menuItem.id,
-                name: item.menuItem.name,
-                price: item.menuItem.price,
-                quantity: item.quantity
-              }))
-            : []
-      };
-
-      const response = await bookTable(submissionData);
-
-      if (response.success) {
-        setBookingId(response.bookingId || '');
-        setStatus('success');
-
-        if (formData.orderPreference === 'preorder') {
-          clearCart();
-        }
-      }
-    } catch (error) {
-      setStatus('error');
-      setErrorMessage(
-        error.message || 'Failed to book table. Please try again.'
-      );
-    }
-  };
+    return () => {
+      document.body.classList.remove('booking-active');
+      window.dispatchEvent(new Event('bookingStateChange'));
+    };
+  }, [isBookingOpen]);
 
   return (
-    <section
-      id="book"
-      className="py-24 bg-brand-charcoal text-brand-cream relative overflow-hidden"
-    >
-      <div
-        className="absolute inset-0 opacity-10"
-        style={{
-          backgroundImage:
-            'radial-gradient(circle at 20% 50%, #D4AF37 0%, transparent 50%)'
-        }}
-      ></div>
+    <section id="book" className="relative min-h-screen w-full bg-gradient-to-b from-stone-50 via-white to-stone-100 text-stone-900 flex flex-col items-center justify-center p-3 sm:p-6 lg:p-8 font-sans antialiased selection:bg-rose-500 selection:text-white overflow-hidden">
+      {/* Dynamic Interactive Luxury Light Background with Subtle Bokeh */}
+      <LuxuryAmbientBackground
+        activeMood={ambientMood}
+        onMoodChange={setAmbientMood}
+        showMoodControls={!isBookingOpen}
+      />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      {/* Main Content Area */}
+      <main className="w-full mx-auto flex flex-col items-center justify-center relative z-10 transition-all duration-300 max-w-2xl">
+        <AnimatePresence mode="wait">
+          {!isBookingOpen ? (
+            /* Clean & Simple Hero View */
+            <motion.div
+              key="landing-hero"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+              className="w-full text-center space-y-6 sm:space-y-8 py-6 px-2"
+            >
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
-
-          <div className="sticky top-32">
-            <h2 className="text-brand-gold font-semibold tracking-[0.2em] uppercase text-sm mb-4">
-              Reservations
-            </h2>
-
-            <h3 className="text-4xl md:text-5xl font-serif mb-6 leading-tight">
-              Secure Your <br /> Culinary Experience
-            </h3>
-
-            <p className="text-gray-400 text-lg mb-10 font-light max-w-md">
-              Whether it's a romantic dinner, a family gathering, or a business meeting, we ensure your dining experience is flawless.
-            </p>
-
-            <div className="space-y-6">
-
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-full border border-brand-gold/30 flex items-center justify-center shrink-0">
-                  <Info className="w-5 h-5 text-brand-gold" />
-                </div>
-
-                <div>
-                  <h4 className="font-bold text-white mb-1">
-                    Dietary Requirements
-                  </h4>
-
-                  <p className="text-gray-400 text-sm">
-                    Please let us know of any allergies or dietary requirements in the special requests field.
-                  </p>
-                </div>
+              {/* Title & Tagline */}
+              <div className="space-y-3">
+                <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-stone-900 leading-tight drop-shadow-xs">
+                  Royal Spice&apos;s{' '}
+                  <span className="bg-gradient-to-r from-rose-600 via-amber-600 to-rose-500 bg-clip-text text-transparent">
+                    Dining & Lounge
+                  </span>
+                </h1>
+                <p className="text-sm sm:text-base text-stone-600 max-w-lg mx-auto leading-relaxed font-normal">
+                  Reserve your exact seat on our interactive live floor plan with real-time availability and 5-minute hold protection.
+                </p>
               </div>
 
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-full border border-brand-gold/30 flex items-center justify-center shrink-0">
-                  <Users className="w-5 h-5 text-brand-gold" />
-                </div>
-
-                <div>
-                  <h4 className="font-bold text-white mb-1">
-                    Large Parties
-                  </h4>
-
-                  <p className="text-gray-400 text-sm">
-                    For bookings of 10 or more guests, please contact us directly via phone.
-                  </p>
-                </div>
+              {/* Atmosphere Pill Indicators */}
+              <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs font-semibold text-stone-700">
+                <span className="px-3 py-1 rounded-full bg-white/80 backdrop-blur-md border border-stone-200 shadow-2xs flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#e11d48]" />
+                  <span>Center Lounge</span>
+                </span>
+                <span className="px-3 py-1 rounded-full bg-white/80 backdrop-blur-md border border-stone-200 shadow-2xs flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#059669]" />
+                  <span>North Terrace</span>
+                </span>
+                <span className="px-3 py-1 rounded-full bg-white/80 backdrop-blur-md border border-stone-200 shadow-2xs flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#4f46e5]" />
+                  <span>Velvet Alcoves</span>
+                </span>
               </div>
 
-            </div>
-
-            {cartItems.length > 0 && (
-              <div className="mt-12 bg-white/5 border border-brand-gold/30 rounded-2xl p-6 backdrop-blur-sm hidden lg:block">
-
-                <div className="flex items-center gap-3 mb-4">
-                  <ShoppingBag className="w-5 h-5 text-brand-gold" />
-                  <h4 className="font-serif text-xl text-white">
-                    Your Pre-Order Cart
-                  </h4>
-                </div>
-
-                <div className="space-y-3 mb-4 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                  {cartItems.map(item => (
-                    <div
-                      key={item.menuItem.id}
-                      className="flex justify-between text-sm"
-                    >
-                      <span className="text-gray-300">
-                        {item.quantity}x {item.menuItem.name}
-                      </span>
-
-                      <span className="text-white font-medium">
-                        ₹{item.menuItem.price * item.quantity}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex justify-between border-t border-white/10 pt-4 font-bold text-lg text-brand-gold">
-                  <span>Total Bill</span>
-                  <span>₹{cartTotal}</span>
-                </div>
-
-              </div>
-            )}
-          </div>
-
-          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-10 shadow-2xl relative">
-
-            <AnimatePresence mode="wait">
-
-              {status === 'success' ? (
-
-                <motion.div
-                  key="success"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="text-center py-10"
+              {/* The Hero "Book a Table Now" Button */}
+              <div className="pt-2">
+                <motion.button
+                  type="button"
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => openBooking('SELECT_TABLE')}
+                  className="group relative inline-flex items-center justify-center gap-3.5 px-9 py-5 rounded-2xl bg-gradient-to-r from-rose-600 via-rose-500 to-amber-500 hover:from-rose-500 hover:to-amber-400 text-white font-black text-base sm:text-lg shadow-xl shadow-rose-600/25 transition-all cursor-pointer border border-rose-400/40 overflow-hidden"
                 >
+                  <span className="absolute inset-0 w-1/2 h-full bg-white/20 skew-x-12 -translate-x-full group-hover:translate-x-[300%] transition-transform duration-1000 pointer-events-none" />
 
-                  <div className="w-24 h-24 bg-green-500/20 text-green-400 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <CheckCircle2 size={48} />
-                  </div>
+                  <Calendar className="w-5 h-5 text-white/95" />
+                  <span>Book a Table Now</span>
+                  <ArrowRight className="w-5 h-5 text-white/95 group-hover:translate-x-1 transition-transform" />
+                </motion.button>
+              </div>
 
-                  <h3 className="text-3xl font-serif text-white mb-2">
-                    Table Reserved!
-                  </h3>
-
-                  <p className="text-gray-400 mb-8">
-                    We look forward to hosting you, {formData.fullName}.
-                  </p>
-
-                  <div className="bg-black/20 rounded-xl p-6 mb-8 text-left border border-white/5">
-
-                    <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-
-                      <div className="text-gray-500">Date</div>
-                      <div className="text-white font-medium text-right">
-                        {formData.date}
-                      </div>
-
-                      <div className="text-gray-500">Time</div>
-                      <div className="text-white font-medium text-right">
-                        {formData.time}
-                      </div>
-
-                      <div className="text-gray-500">Guests</div>
-                      <div className="text-white font-medium text-right">
-                        {formData.guests} People
-                      </div>
-
-                      <div className="text-gray-500">Booking ID</div>
-                      <div className="text-brand-gold font-medium text-right">
-                        {bookingId}
-                      </div>
-
-                    </div>
-
-                    {formData.orderPreference === 'preorder' && (
-                      <div className="pt-4 border-t border-white/10 mt-4">
-                        <div className="text-gray-500 mb-2">
-                          Pre-ordered Items
-                        </div>
-
-                        <div className="text-brand-gold font-medium">
-                          Your delicious meal is pre-ordered!
-                        </div>
-                      </div>
-                    )}
-
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      setStatus('idle');
-                      setFormData({
-                        ...formData,
-                        specialRequest: ''
-                      });
-                    }}
-                    className="w-full py-4 bg-brand-gold text-brand-charcoal font-bold rounded-xl hover:bg-yellow-500 transition-colors"
-                  >
-                    Make Another Booking
-                  </button>
-
-                </motion.div>
-
-              ) : (
-
-                <motion.div
-                  key="form"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-
-                  <form onSubmit={handleSubmit} className="space-y-6">
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-                      <div>
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                          Full Name
-                        </label>
-
-                        <input
-                          required
-                          type="text"
-                          name="fullName"
-                          value={formData.fullName}
-                          onChange={handleChange}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-gold transition-colors"
-                          placeholder="John Doe"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                          Phone
-                        </label>
-
-                        <input
-                          required
-                          type="tel"
-                          name="phone"
-                          value={formData.phone}
-                          onChange={handleChange}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-gold transition-colors"
-                          placeholder="+91 98765 43210"
-                        />
-                      </div>
-
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                        Email Address
-                      </label>
-
-                      <input
-                        required
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-gold transition-colors"
-                        placeholder="john@example.com"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-                      <div>
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                          Date
-                        </label>
-
-                        <div className="relative">
-                          <input
-                            required
-                            type="date"
-                            name="date"
-                            value={formData.date}
-                            onChange={handleChange}
-                            min={new Date().toISOString().split('T')[0]}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-gold transition-colors appearance-none [&::-webkit-calendar-picker-indicator]:invert"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                          Time
-                        </label>
-
-                        <select
-                          required
-                          name="time"
-                          value={formData.time}
-                          onChange={handleChange}
-                          className="w-full bg-brand-charcoal border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-gold transition-colors appearance-none"
-                        >
-                          <option value="">Select</option>
-                          <option value="11:00 AM">11:00 AM</option>
-                          <option value="12:00 PM">12:00 PM</option>
-                          <option value="1:00 PM">1:00 PM</option>
-                          <option value="2:00 PM">2:00 PM</option>
-                          <option value="6:00 PM">6:00 PM</option>
-                          <option value="7:00 PM">7:00 PM</option>
-                          <option value="8:00 PM">8:00 PM</option>
-                          <option value="9:00 PM">9:00 PM</option>
-                          <option value="10:00 PM">10:00 PM</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                          Guests
-                        </label>
-
-                        <select
-                          required
-                          name="guests"
-                          value={formData.guests}
-                          onChange={handleChange}
-                          className="w-full bg-brand-charcoal border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-gold transition-colors appearance-none"
-                        >
-                          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => (
-                            <option key={n} value={n}>
-                              {n} {n === 1 ? 'Person' : 'People'}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                        Table Preference
-                      </label>
-
-                      <select
-                        name="tablePreference"
-                        value={formData.tablePreference}
-                        onChange={handleChange}
-                        className="w-full bg-brand-charcoal border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-gold transition-colors appearance-none"
-                      >
-                        <option value="No Preference">No Preference</option>
-                        <option value="Indoor">Indoor</option>
-                        <option value="Outdoor">Outdoor</option>
-                        <option value="Window Seat">Window Seat</option>
-                        <option value="Family Table">Family Table</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                        Special Requests (Optional)
-                      </label>
-
-                      <textarea
-                        name="specialRequest"
-                        value={formData.specialRequest}
-                        onChange={handleChange}
-                        rows={2}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-gold transition-colors resize-none"
-                        placeholder="Any allergies or special occasions?"
-                      ></textarea>
-                    </div>
-
-                    {cartItems.length > 0 && (
-                      <div className="bg-black/20 border border-white/5 rounded-xl p-6">
-
-                        <label className="block text-sm font-bold text-white uppercase tracking-wider mb-4">
-                          Dining Order Preference
-                        </label>
-
-                        <div className="flex flex-col sm:flex-row gap-4">
-
-                          <label className="flex items-center gap-3 cursor-pointer group">
-
-                            <input
-                              type="radio"
-                              name="orderPreference"
-                              value="preorder"
-                              checked={formData.orderPreference === 'preorder'}
-                              onChange={handleChange}
-                              className="accent-brand-gold w-4 h-4 cursor-pointer"
-                            />
-
-                            <span
-                              className={`text-sm transition-colors ${
-                                formData.orderPreference === 'preorder'
-                                  ? 'text-brand-gold font-medium'
-                                  : 'text-gray-300 group-hover:text-white'
-                              }`}
-                            >
-                              Pre-order these items (₹{cartTotal})
-                            </span>
-
-                          </label>
-
-                          <label className="flex items-center gap-3 cursor-pointer group">
-
-                            <input
-                              type="radio"
-                              name="orderPreference"
-                              value="dine-in"
-                              checked={formData.orderPreference === 'dine-in'}
-                              onChange={handleChange}
-                              className="accent-brand-gold w-4 h-4 cursor-pointer"
-                            />
-
-                            <span
-                              className={`text-sm transition-colors ${
-                                formData.orderPreference === 'dine-in'
-                                  ? 'text-brand-gold font-medium'
-                                  : 'text-gray-300 group-hover:text-white'
-                              }`}
-                            >
-                              I'll order at the restaurant
-                            </span>
-
-                          </label>
-
-                        </div>
-
-                        {/* Mobile view cart summary */}
-                        <div className="mt-4 pt-4 border-t border-white/5 lg:hidden">
-
-                          <div className="flex justify-between text-sm mb-2 text-gray-400">
-                            <span>Items in Cart:</span>
-                            <span className="text-white font-medium">
-                              {cartItems.reduce((a, b) => a + b.quantity, 0)}
-                            </span>
-                          </div>
-
-                          <div className="flex justify-between text-sm text-brand-gold font-bold">
-                            <span>Total Bill:</span>
-                            <span>₹{cartTotal}</span>
-                          </div>
-
-                        </div>
-
-                      </div>
-                    )}
-
-                    {status === 'error' && (
-                      <div className="text-red-400 text-sm bg-red-400/10 p-3 rounded-lg border border-red-400/20">
-                        {errorMessage}
-                      </div>
-                    )}
-
-                    <button
-                      type="submit"
-                      disabled={status === 'loading'}
-                      className="w-full py-4 bg-brand-gold text-brand-charcoal font-bold rounded-xl hover:bg-yellow-500 transition-colors flex justify-center items-center gap-2"
-                    >
-                      {status === 'loading' ? (
-                        <>
-                          <Loader2 className="animate-spin w-5 h-5" />
-                          Processing...
-                        </>
-                      ) : (
-                        'Confirm Reservation'
-                      )}
-                    </button>
-
-                  </form>
-
-                </motion.div>
-              )}
-
-            </AnimatePresence>
-
-          </div>
-
-        </div>
-
-      </div>
+              {/* Live Availability Subtitle */}
+              <div className="flex items-center justify-center gap-3 text-xs text-stone-500 font-medium">
+                <span className="flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  Instant 5-Min Redis Hold Lock
+                </span>
+                <span>·</span>
+                <span className="flex items-center gap-1.5">
+                  <Utensils className="w-4 h-4 text-amber-600" />
+                  10 Interactive Tables
+                </span>
+              </div>
+            </motion.div>
+          ) : (
+            /* Full-Screen Immersive 1-Page Booking Application in Pure Light Theme */
+            <motion.div
+              key="booking-widget-fullscreen"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="fixed inset-0 z-[100] bg-white text-stone-900 flex flex-col w-screen h-[100dvh] overflow-y-auto no-scrollbar"
+            >
+              <TableReservationWidget
+                formData={formData}
+                setFormData={setFormData}
+                onClose={() => setIsBookingOpen(false)}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </main>
     </section>
   );
 }

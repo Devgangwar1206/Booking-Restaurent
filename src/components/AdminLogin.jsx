@@ -8,57 +8,47 @@ export default function AdminLogin() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const navigate = useNavigate();
 
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
 
+    try {
+      const response = await fetch(
+        `${API_URL}/admin/login`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            username,
+            password
+          })
+        }
+      );
 
-    const handleLogin = async (e) => {
+      const data = await response.json();
 
-  e.preventDefault();
-
-  try {
-
-    const response = await fetch(
-      `${API_URL}/admin/login`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          username,
-          password
-        })
+      if (response.ok) {
+        console.log("Login successful");
+        localStorage.setItem("adminToken", data.token);
+        navigate("/dashboard");
+      } else {
+        console.log("Login failed:", data);
+        setError("Invalid username or password");
       }
-    );
-
-    const data = await response.json();
-
-    if (response.ok) {
-
-      console.log("Login successful");
-
-      localStorage.setItem("adminToken", data.token);
-
-      navigate("/dashboard");
-
-    } else {
-
-      console.log("Login failed:", data);
-
-      setError("Invalid username or password");
-
+    } catch (error) {
+      console.error("Login error:", error);
+      setError("Something went wrong. Please check backend connection.");
+    } finally {
+      setIsLoading(false);
     }
-
-  } catch (error) {
-
-    console.error("Login error:", error);
-
-    setError("Something went wrong. Please try again.");
-
-  }
-};
+  };
 
   return (
     <div className="min-h-screen bg-brand-charcoal flex items-center justify-center p-4 relative overflow-hidden">
@@ -133,10 +123,20 @@ export default function AdminLogin() {
 
           <button
             type="submit"
-            className="w-full py-4 bg-brand-gold text-brand-charcoal font-bold rounded-xl hover:bg-yellow-500 transition-colors flex justify-center items-center gap-2"
+            disabled={isLoading}
+            className="w-full py-4 bg-brand-gold text-brand-charcoal font-bold rounded-xl hover:bg-yellow-500 transition-all flex justify-center items-center gap-2.5 shadow-lg disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer"
           >
-            <LogIn className="w-5 h-5" />
-            Sign In
+            {isLoading ? (
+              <>
+                <span className="w-5 h-5 border-2 border-brand-charcoal/30 border-t-brand-charcoal rounded-full animate-spin shrink-0" />
+                <span>Checking credentials & logging in...</span>
+              </>
+            ) : (
+              <>
+                <LogIn className="w-5 h-5" />
+                <span>Sign In</span>
+              </>
+            )}
           </button>
         </form>
 

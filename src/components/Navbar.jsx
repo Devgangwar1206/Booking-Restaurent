@@ -6,6 +6,7 @@ import { useCart } from '../context/CartContext';
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isBookingActive, setIsBookingActive] = useState(false);
   const { cartItems, setIsCartOpen } = useCart();
 
   const totalCartItems = cartItems.reduce(
@@ -18,10 +19,27 @@ export default function Navbar() {
       setIsScrolled(window.scrollY > 50);
     };
 
-    window.addEventListener('scroll', handleScroll);
+    const checkBooking = () => {
+      setIsBookingActive(document.body.classList.contains('booking-active'));
+    };
 
-    return () => window.removeEventListener('scroll', handleScroll);
+    checkBooking();
+    const observer = new MutationObserver(checkBooking);
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
+    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('bookingStateChange', checkBooking);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('bookingStateChange', checkBooking);
+      observer.disconnect();
+    };
   }, []);
+
+  if (isBookingActive) {
+    return null;
+  }
 
   const navLinks = [
     { name: 'Home', href: '#home' },
