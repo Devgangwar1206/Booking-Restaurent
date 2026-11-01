@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Calendar,
@@ -154,12 +154,22 @@ export default function TableReservationWidget({
     '8:00 pm',
   ];
 
+  // Mutex ref to prevent overlapping network calls if backend takes time
+  const isFetchingRef = useRef(false);
+
   // Fetch Live Table Availability from Backend
+  // isSilent = true suppresses loading spinners/overlays so the floor plan never blurs or flickers
   const refreshAvailability = useCallback(
-    async (bypassCache = false) => {
-      try {
+    async (bypassCache = false, isSilent = false) => {
+      if (isFetchingRef.current) return;
+      isFetchingRef.current = true;
+
+      if (!isSilent) {
         setIsLoadingAvailability(true);
         setAvailabilityError(null);
+      }
+
+      try {
         const url = `${BASE_API}/api/availability?date=${formData.date}&timeSlot=${encodeURIComponent(
           formData.timeSlot
         )}&guestCount=${formData.guestCount}&sessionId=${sessionId || ''}${
@@ -178,65 +188,46 @@ export default function TableReservationWidget({
             const updated = data.tables.find((t) => t.id === prev.id);
             return updated || prev;
           });
-        } else {
+        } else if (!isSilent) {
           setAvailabilityError(data.error || 'Failed to load table availability');
         }
       } catch (err) {
-        setAvailabilityError(err.message || 'Error connecting to availability service');
-        setTables((prev) => (prev.length > 0 ? prev : RESTAURANT_TABLES.map((t) => ({ ...t, status: 'AVAILABLE', suitableForGuests: true }))));
+        if (!isSilent) {
+          setAvailabilityError(err.message || 'Error connecting to availability service');
+          setTables((prev) => (prev.length > 0 ? prev : RESTAURANT_TABLES.map((t) => ({ ...t, status: 'AVAILABLE', suitableForGuests: true }))));
+        }
       } finally {
-        setIsLoadingAvailability(false);
+        isFetchingRef.current = false;
+        if (!isSilent) {
+          setIsLoadingAvailability(false);
+        }
       }
     },
     [formData.date, formData.timeSlot, formData.guestCount, sessionId]
   );
 
+  // Initial and parameter change load
   useEffect(() => {
-    let ignore = false;
     if (!sessionId) return;
-
-    const url = `${BASE_API}/api/availability?date=${formData.date}&timeSlot=${encodeURIComponent(
-      formData.timeSlot
-    )}&guestCount=${formData.guestCount}&sessionId=${sessionId}`;
-
-    fetch(url)
-      .then((res) => res.json())
-      .then((data) => {
-        if (!ignore && data.success && data.tables) {
-          setTables(data.tables);
-          setSelectedTable((prev) => {
-            if (prev) {
-              const updated = data.tables.find((t) => t.id === prev.id);
-              if (updated && (updated.status === 'AVAILABLE' || updated.heldByCurrentSession)) {
-                return updated;
-              }
-            }
-            const available = data.tables.find((t) => t.status === 'AVAILABLE');
-            return available || null;
-          });
-        }
-      })
-      .catch((err) => {
-        if (!ignore) {
-          setAvailabilityError(err.message || 'Failed to load table availability');
-          setTables((prev) => (prev.length > 0 ? prev : RESTAURANT_TABLES.map((t) => ({ ...t, status: 'AVAILABLE', suitableForGuests: true }))));
-        }
-      });
-
-    return () => {
-      ignore = true;
-    };
+    // If tables are already loaded, do a smooth silent refresh so UI doesn't blur
+    const silent = tables.length > 0;
+    refreshAvailability(false, silent);
   }, [sessionId, formData.date, formData.timeSlot, formData.guestCount]);
 
-  // Live polling every 3.5 seconds + on window focus so multi-tab updates reflect in real-time
+  // Smart background polling: every 8s ONLY when user is actively on SELECT_TABLE step and tab is visible
   useEffect(() => {
-    if (!sessionId) return;
+    if (!sessionId || !isBookingOpen || currentStep !== 'SELECT_TABLE') return;
+
     const interval = setInterval(() => {
-      refreshAvailability(false);
-    }, 3500);
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        refreshAvailability(false, true); // Silent background poll
+      }
+    }, 8000);
 
     const onFocus = () => {
-      refreshAvailability(true);
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        refreshAvailability(true, true); // Silent refresh on focus
+      }
     };
     window.addEventListener('focus', onFocus);
 
@@ -244,7 +235,7 @@ export default function TableReservationWidget({
       clearInterval(interval);
       window.removeEventListener('focus', onFocus);
     };
-  }, [sessionId, refreshAvailability]);
+  }, [sessionId, isBookingOpen, currentStep, refreshAvailability]);
 
   // Handle table selection on floor plan (local selection without locking Redis immediately)
   const handleSelectTable = (table) => {
