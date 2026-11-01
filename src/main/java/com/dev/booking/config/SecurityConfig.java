@@ -78,9 +78,11 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
 
                 .requestMatchers(
+                    "/",
                     "/create",
                     "/contact",
-                    "/admin/login"
+                    "/admin/login",
+                    "/api/**"
                 ).permitAll()
 
                 .anyRequest().authenticated()
@@ -99,9 +101,17 @@ public class SecurityConfig {
         CorsConfiguration configuration =
                 new CorsConfiguration();
 
-        configuration.setAllowedOrigins(
-                List.of(frontendUrl)
-        );
+        java.util.List<String> origins = new java.util.ArrayList<>();
+        if (frontendUrl != null && !frontendUrl.isBlank()) {
+            origins.add(frontendUrl);
+        }
+        origins.add("http://localhost:5173");
+        origins.add("http://localhost:5174");
+        origins.add("http://localhost:3000");
+        origins.add("http://127.0.0.1:5173");
+
+        configuration.setAllowedOrigins(origins);
+        configuration.setAllowedOriginPatterns(List.of("*"));
 
         configuration.setAllowedMethods(
                 List.of(

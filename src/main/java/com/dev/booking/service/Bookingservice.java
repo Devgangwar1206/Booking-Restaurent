@@ -25,6 +25,12 @@ public class Bookingservice {
 	
 	@Autowired
 	private BookingRepository bookingrepo;
+
+	@Autowired(required = false)
+	private com.dev.booking.repository.ReservationRepository reservationRepository;
+
+	@Autowired(required = false)
+	private AvailabilityCacheService availabilityCacheService;
 	
 	public CreateResponsedto booknewservice(CreateRequestdto bookingdto) {
 		
@@ -68,6 +74,37 @@ public class Bookingservice {
 	
 	
 	public List<CreateResponsedto> getallbookingdto() {
+
+	    // Auto-sync any confirmed reservations that don't have a booking record yet
+	    if (reservationRepository != null) {
+	        try {
+	            List<com.dev.booking.model.Reservation> reservations = reservationRepository.findAll();
+	            for (com.dev.booking.model.Reservation res : reservations) {
+	                if (res.getStatus() == com.dev.booking.model.ReservationStatus.CONFIRMED && res.getBookingReference() != null) {
+	                    if (!bookingrepo.existsByBookingId(res.getBookingReference())) {
+	                        Booking b = new Booking();
+	                        b.setBookingId(res.getBookingReference());
+	                        b.setFullName(res.getCustomerName());
+	                        b.setEmail(res.getCustomerEmail());
+	                        b.setPhone(res.getCustomerPhone());
+	                        b.setDate(res.getDate());
+	                        b.setTime(res.getTimeSlot());
+	                        b.setGuests(res.getGuestCount() != null ? res.getGuestCount() : 1);
+	                        if (res.getTable() != null) {
+	                            b.setTablePreference("Table " + res.getTable().getTableNumber() + " - " + res.getTable().getName() + " (" + res.getTable().getZone() + ")");
+	                        } else {
+	                            b.setTablePreference("Reserved Table");
+	                        }
+	                        b.setSpecialRequest(res.getSpecialRequests() != null ? res.getSpecialRequests() : "");
+	                        b.setCreatedAt(res.getCreatedAt() != null ? res.getCreatedAt() : LocalDateTime.now());
+	                        b.setOrderPreference("dinein");
+	                        b.setCartItems(new ArrayList<>());
+	                        bookingrepo.save(b);
+	                    }
+	                }
+	            }
+	        } catch (Exception ignored) {}
+	    }
 
 	    List<Booking> bookings = bookingrepo.findAll();
 
@@ -115,9 +152,20 @@ public class Bookingservice {
 		Booking getbooking = bookingrepo
 									.findById(id)
 									.orElseThrow(() -> 
-													new ResourceNotFoundException("Student with id " + id + " not found"));
+													new ResourceNotFoundException("Booking with id " + id + " not found"));
 		
-//		if(getbooking.isEmpty()) return false;
+		String bookingId = getbooking.getBookingId();
+		if (bookingId != null && !bookingId.isBlank() && reservationRepository != null) {
+			try {
+				reservationRepository.findByBookingReference(bookingId).ifPresent(res -> {
+					res.setStatus(com.dev.booking.model.ReservationStatus.CANCELLED);
+					reservationRepository.save(res);
+					if (availabilityCacheService != null) {
+						availabilityCacheService.evictAvailability(res.getDate(), res.getTimeSlot());
+					}
+				});
+			} catch (Exception ignored) {}
+		}
 		
 		bookingrepo.deleteById(id);
 		return true;
