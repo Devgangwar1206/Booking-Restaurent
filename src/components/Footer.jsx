@@ -2,8 +2,10 @@ import {
   UtensilsCrossed,
   MapPin,
   Phone,
-  Mail
+  Mail,
+  Lock
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function Footer() {
   return (
@@ -76,6 +78,16 @@ export default function Footer() {
                   Contact Us
                 </a>
               </li>
+
+              <li>
+                <Link
+                  to="/login"
+                  className="text-gray-400 hover:text-brand-gold transition-colors text-sm flex items-center gap-1.5"
+                >
+                  <Lock className="w-3.5 h-3.5 text-brand-gold" />
+                  <span>Admin Portal</span>
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -133,7 +145,7 @@ export default function Footer() {
             © {new Date().getFullYear()} Royal Spice. All Rights Reserved.
           </p>
 
-          <div className="flex gap-4 mt-4 md:mt-0">
+          <div className="flex items-center gap-4 mt-4 md:mt-0 text-xs">
             <a
               href="#"
               className="hover:text-brand-gold transition-colors"
@@ -141,12 +153,24 @@ export default function Footer() {
               Privacy Policy
             </a>
 
+            <span className="text-gray-700">•</span>
+
             <a
               href="#"
               className="hover:text-brand-gold transition-colors"
             >
               Terms of Service
             </a>
+
+            <span className="text-gray-700">•</span>
+
+            <Link
+              to="/login"
+              className="text-gray-400 hover:text-brand-gold transition-colors flex items-center gap-1 font-medium"
+            >
+              <Lock className="w-3 h-3 text-brand-gold" />
+              <span>Admin Login</span>
+            </Link>
           </div>
         </div>
 
