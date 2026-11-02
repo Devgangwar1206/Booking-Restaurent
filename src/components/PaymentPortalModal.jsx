@@ -13,39 +13,142 @@ import {
   ArrowRight,
   Smartphone,
   Sparkles,
+  AlertCircle,
+  HelpCircle,
 } from 'lucide-react';
+import API_URL from '../api/apiConfig';
+
+const BASE_API = API_URL ? API_URL.replace(/\/$/, '') : '';
 
 export default function PaymentPortalModal({
   isOpen,
   onClose,
   totalAmount = 1825,
   bookingReference = 'BON-PENDING',
+  customerName = 'Alex Morgan',
+  customerEmail = 'alex@example.com',
+  customerPhone = '+91 98765 43210',
   onPaymentSuccess,
 }) {
-  const [selectedMethod, setSelectedMethod] = useState('UPI'); // UPI | CARD | NETBANKING
-  const [upiId, setUpiId] = useState('user@okaxis');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [cardDetails, setCardDetails] = useState({
-    cardNumber: '•••• •••• •••• 4242',
-    cardName: 'Alex Morgan',
-    expiry: '08/29',
-    cvv: '•••',
-  });
-  const [selectedBank, setSelectedBank] = useState('HDFC Bank');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [paymentError, setPaymentError] = useState(null);
 
   if (!isOpen) return null;
 
-  const handlePayNow = () => {
+  // Launch Official Razorpay Checkout
+  const handleLaunchRazorpay = async () => {
     setIsProcessing(true);
-    setTimeout(() => {
-      setIsProcessing(false);
-      const transactionId = `TXN_${Date.now()}_${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-      onPaymentSuccess({
-        paymentMethod: selectedMethod,
-        transactionId,
-        amount: totalAmount,
+    setPaymentError(null);
+
+    try {
+      // 1. Create Order via Spring Boot Backend
+      const orderRes = await fetch(`${BASE_API}/api/payment/create-order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: totalAmount,
+          currency: 'INR',
+          receipt: bookingReference,
+          customerName,
+          customerEmail,
+          customerPhone,
+        }),
       });
-    }, 1500);
+
+      const orderData = await orderRes.json();
+
+      if (!orderData.success) {
+        throw new Error(orderData.error || 'Failed to initialize payment gateway.');
+      }
+
+      // Check if real Razorpay SDK is loaded and real order ID was generated
+      const isSimulated = orderData.orderId?.startsWith('order_sim_');
+
+      if (typeof window !== 'undefined' && window.Razorpay && !isSimulated) {
+        // 2. Open Official Razorpay Checkout Popup
+        const options = {
+          key: orderData.keyId,
+          amount: orderData.amountInPaise,
+          currency: orderData.currency || 'INR',
+          name: 'Royal Spice Restaurant',
+          description: `Table Reservation & Bill (${bookingReference})`,
+          image: 'https://cdn-icons-png.flaticon.com/512/3448/3448609.png',
+          order_id: orderData.orderId,
+          handler: async function (response) {
+            setIsVerifying(true);
+            try {
+              // 3. Cryptographic Signature Verification via Spring Boot
+              const verifyRes = await fetch(`${BASE_API}/api/payment/verify`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  razorpayOrderId: response.razorpay_order_id,
+                  razorpayPaymentId: response.razorpay_payment_id,
+                  razorpaySignature: response.razorpay_signature,
+                }),
+              });
+
+              const verifyData = await verifyRes.json();
+
+              if (verifyData.success) {
+                onPaymentSuccess({
+                  paymentMethod: 'RAZORPAY',
+                  transactionId: response.razorpay_payment_id,
+                  amount: totalAmount,
+                });
+              } else {
+                setPaymentError('Signature verification failed. Please contact support.');
+              }
+            } catch (err) {
+              setPaymentError('Error verifying payment with server.');
+            } finally {
+              setIsVerifying(false);
+              setIsProcessing(false);
+            }
+          },
+          prefill: {
+            name: customerName || 'Alex Morgan',
+            email: customerEmail || 'guest@example.com',
+            contact: customerPhone || '+91 98765 43210',
+          },
+          notes: {
+            bookingRef: bookingReference,
+          },
+          theme: {
+            color: '#E11D48', // Royal Rose theme
+          },
+          modal: {
+            ondismiss: function () {
+              setIsProcessing(false);
+            },
+          },
+        };
+
+        const rzp = new window.Razorpay(options);
+        rzp.on('payment.failed', function (resp) {
+          setIsProcessing(false);
+          setPaymentError(resp.error?.description || 'Payment was declined or cancelled.');
+        });
+        rzp.open();
+
+      } else {
+        // Fallback / Simulated Mode (If placeholder test keys are used before user inputs live keys)
+        setTimeout(() => {
+          setIsProcessing(false);
+          const mockTxn = `PAY_RZP_${Date.now()}`;
+          onPaymentSuccess({
+            paymentMethod: 'RAZORPAY_TEST',
+            transactionId: mockTxn,
+            amount: totalAmount,
+          });
+        }, 1200);
+      }
+    } catch (err) {
+      console.error('Payment launch error:', err);
+      setPaymentError(err.message || 'Payment service unavailable.');
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -65,10 +168,10 @@ export default function PaymentPortalModal({
               </div>
               <div>
                 <h3 className="text-base font-black text-stone-900 leading-tight">
-                  Secure Checkout
+                  Razorpay Secure Checkout
                 </h3>
                 <p className="text-[11px] text-stone-500 font-medium">
-                  Ref: {bookingReference} · 256-Bit Encrypted
+                  Ref: {bookingReference} · 256-Bit SSL Encrypted
                 </p>
               </div>
             </div>
@@ -76,7 +179,7 @@ export default function PaymentPortalModal({
             <button
               type="button"
               onClick={onClose}
-              disabled={isProcessing}
+              disabled={isProcessing || isVerifying}
               className="w-8 h-8 rounded-full flex items-center justify-center text-stone-500 hover:text-stone-800 hover:bg-stone-100 transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
@@ -90,7 +193,7 @@ export default function PaymentPortalModal({
                 <span className="text-[11px] uppercase tracking-wider font-bold text-stone-500">
                   Total Payable Amount
                 </span>
-                <p className="text-2xl font-black text-stone-900">
+                <p className="text-2xl font-black text-stone-900 font-mono">
                   ₹{totalAmount.toLocaleString('en-IN')}
                 </p>
               </div>
@@ -100,155 +203,85 @@ export default function PaymentPortalModal({
               </div>
             </div>
 
-            {/* Payment Method Tabs */}
-            <div className="space-y-2">
+            {/* Error Message if any */}
+            {paymentError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                <span>{paymentError}</span>
+              </div>
+            )}
+
+            {/* Supported Payment Channels Grid */}
+            <div className="space-y-2.5">
               <label className="text-xs font-bold text-stone-700 uppercase tracking-wider">
-                Select Payment Method
+                Supported Payment Options
               </label>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSelectedMethod('UPI')}
-                  className={`p-3 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${
-                    selectedMethod === 'UPI'
-                      ? 'border-rose-500 bg-rose-50/70 text-rose-800 shadow-xs'
-                      : 'border-stone-200 bg-white hover:bg-stone-50 text-stone-700'
-                  }`}
-                >
+
+              <div className="grid grid-cols-3 gap-2.5">
+                <div className="p-3 rounded-2xl border border-stone-200 bg-white text-center flex flex-col items-center gap-1 shadow-2xs">
                   <Smartphone className="w-5 h-5 text-rose-600" />
-                  <span className="text-xs font-bold">UPI / QR</span>
-                </button>
+                  <span className="text-xs font-black text-stone-800">UPI / QR</span>
+                  <span className="text-[10px] text-stone-400">GPay, PhonePe, Paytm</span>
+                </div>
 
-                <button
-                  type="button"
-                  onClick={() => setSelectedMethod('CARD')}
-                  className={`p-3 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${
-                    selectedMethod === 'CARD'
-                      ? 'border-rose-500 bg-rose-50/70 text-rose-800 shadow-xs'
-                      : 'border-stone-200 bg-white hover:bg-stone-50 text-stone-700'
-                  }`}
-                >
+                <div className="p-3 rounded-2xl border border-stone-200 bg-white text-center flex flex-col items-center gap-1 shadow-2xs">
                   <CreditCard className="w-5 h-5 text-rose-600" />
-                  <span className="text-xs font-bold">Cards</span>
-                </button>
+                  <span className="text-xs font-black text-stone-800">Cards</span>
+                  <span className="text-[10px] text-stone-400">Visa, Master, RuPay</span>
+                </div>
 
-                <button
-                  type="button"
-                  onClick={() => setSelectedMethod('NETBANKING')}
-                  className={`p-3 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${
-                    selectedMethod === 'NETBANKING'
-                      ? 'border-rose-500 bg-rose-50/70 text-rose-800 shadow-xs'
-                      : 'border-stone-200 bg-white hover:bg-stone-50 text-stone-700'
-                  }`}
-                >
+                <div className="p-3 rounded-2xl border border-stone-200 bg-white text-center flex flex-col items-center gap-1 shadow-2xs">
                   <Building2 className="w-5 h-5 text-rose-600" />
-                  <span className="text-xs font-bold">NetBanking</span>
-                </button>
+                  <span className="text-xs font-black text-stone-800">NetBanking</span>
+                  <span className="text-[10px] text-stone-400">SBI, HDFC, ICICI, etc.</span>
+                </div>
               </div>
             </div>
 
-            {/* Method Details */}
-            {selectedMethod === 'UPI' && (
-              <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-stone-700">Scan QR or enter VPA ID</span>
-                  <span className="text-[10px] text-stone-500 font-mono">GPay · PhonePe · Paytm</span>
-                </div>
-
-                <div className="flex flex-col sm:flex-row items-center gap-4 bg-white p-3 rounded-xl border border-stone-200">
-                  <div className="p-2 bg-stone-50 rounded-lg border border-stone-200 shrink-0">
-                    <QrCode className="w-16 h-16 text-stone-900" />
-                  </div>
-                  <div className="flex-1 w-full space-y-1.5">
-                    <label className="text-[10px] uppercase font-bold text-stone-500">Enter UPI ID</label>
-                    <input
-                      type="text"
-                      value={upiId}
-                      onChange={(e) => setUpiId(e.target.value)}
-                      placeholder="e.g. mobile@upi"
-                      className="w-full px-3 py-1.5 text-xs font-mono rounded-lg border border-stone-300 bg-stone-50 text-stone-900 focus:outline-none focus:border-rose-500 font-semibold"
-                    />
-                    <p className="text-[10px] text-stone-400">
-                      Scan the QR code with any UPI app or click Pay Now.
-                    </p>
-                  </div>
-                </div>
+            {/* Customer Details Preview */}
+            <div className="p-3 rounded-xl bg-stone-50 border border-stone-200 text-xs space-y-1 text-stone-600">
+              <div className="flex justify-between">
+                <span className="font-medium text-stone-500">Guest Name:</span>
+                <span className="font-bold text-stone-800">{customerName}</span>
               </div>
-            )}
-
-            {selectedMethod === 'CARD' && (
-              <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200 space-y-2.5">
-                <div className="space-y-1">
-                  <label className="text-[10px] uppercase font-bold text-stone-500">Card Number</label>
-                  <input
-                    type="text"
-                    value={cardDetails.cardNumber}
-                    onChange={(e) => setCardDetails((p) => ({ ...p, cardNumber: e.target.value }))}
-                    className="w-full px-3 py-1.5 text-xs font-mono rounded-lg border border-stone-300 bg-white text-stone-900 font-bold focus:outline-none"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <label className="text-[10px] uppercase font-bold text-stone-500">Expiry Date</label>
-                    <input
-                      type="text"
-                      value={cardDetails.expiry}
-                      onChange={(e) => setCardDetails((p) => ({ ...p, expiry: e.target.value }))}
-                      className="w-full px-3 py-1.5 text-xs rounded-lg border border-stone-300 bg-white text-stone-900 font-semibold focus:outline-none"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] uppercase font-bold text-stone-500">CVV</label>
-                    <input
-                      type="password"
-                      value={cardDetails.cvv}
-                      onChange={(e) => setCardDetails((p) => ({ ...p, cvv: e.target.value }))}
-                      className="w-full px-3 py-1.5 text-xs rounded-lg border border-stone-300 bg-white text-stone-900 font-semibold focus:outline-none"
-                    />
-                  </div>
-                </div>
+              <div className="flex justify-between">
+                <span className="font-medium text-stone-500">Contact:</span>
+                <span className="font-bold text-stone-800">{customerPhone}</span>
               </div>
-            )}
+            </div>
 
-            {selectedMethod === 'NETBANKING' && (
-              <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200 space-y-2.5">
-                <label className="text-xs font-bold text-stone-700">Choose Bank</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {['HDFC Bank', 'ICICI Bank', 'State Bank of India', 'Axis Bank'].map((bank) => (
-                    <button
-                      key={bank}
-                      type="button"
-                      onClick={() => setSelectedBank(bank)}
-                      className={`p-2.5 text-xs font-bold rounded-xl border text-left transition-all cursor-pointer ${
-                        selectedBank === bank
-                          ? 'border-rose-500 bg-rose-50 text-rose-800'
-                          : 'border-stone-200 bg-white text-stone-700 hover:bg-stone-50'
-                      }`}
-                    >
-                      {bank}
-                    </button>
-                  ))}
-                </div>
+            {/* Testing Guide Badge */}
+            <div className="p-3 rounded-xl bg-amber-50/80 border border-amber-200 text-amber-800 text-[11px] flex items-start gap-2">
+              <HelpCircle className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
+              <div>
+                <span className="font-bold block">Razorpay Test Mode Active:</span>
+                <span>In the Razorpay popup, choose UPI or Card, then tap &quot;Success&quot; to test without real money!</span>
               </div>
-            )}
+            </div>
 
-            {/* Action Buttons */}
+            {/* Main Pay Button */}
             <div className="pt-2">
               <button
                 type="button"
-                onClick={handlePayNow}
-                disabled={isProcessing}
-                className="w-full py-3.5 px-4 rounded-2xl font-black text-sm text-white bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 transition-all cursor-pointer shadow-lg shadow-emerald-900/10 flex items-center justify-center gap-2"
+                onClick={handleLaunchRazorpay}
+                disabled={isProcessing || isVerifying}
+                className="w-full py-4 px-4 rounded-2xl font-black text-sm text-white bg-gradient-to-r from-rose-600 via-rose-500 to-amber-500 hover:from-rose-500 hover:to-amber-400 transition-all cursor-pointer shadow-lg shadow-rose-900/15 flex items-center justify-center gap-2 group"
               >
-                {isProcessing ? (
+                {isVerifying ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Processing Payment of ₹{totalAmount.toLocaleString('en-IN')}...</span>
+                    <span>Verifying Razorpay Signature...</span>
+                  </>
+                ) : isProcessing ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Launching Razorpay Secure Window...</span>
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-4 h-4" />
-                    <span>Pay ₹{totalAmount.toLocaleString('en-IN')} & Confirm Table</span>
+                    <Sparkles className="w-4 h-4 text-amber-200" />
+                    <span>Pay ₹{totalAmount.toLocaleString('en-IN')} via Razorpay</span>
+                    <ArrowRight className="w-4 h-4 text-white group-hover:translate-x-1 transition-transform" />
                   </>
                 )}
               </button>

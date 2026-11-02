@@ -507,12 +507,15 @@ export default function TableReservationWidget({
           isSubmitting={isConfirming}
         />
 
-        {/* Realistic Payment Portal Modal */}
+        {/* Razorpay Official Payment Portal Modal */}
         <PaymentPortalModal
           isOpen={isPaymentPortalOpen}
           onClose={() => setIsPaymentPortalOpen(false)}
           totalAmount={currentBill ? currentBill.total : 0}
-          bookingReference={`BON-${selectedTable?.tableNumber || 'TAB'}`}
+          bookingReference={`BON-${selectedTable?.tableNumber || 'TAB'}-${Date.now().toString().slice(-4)}`}
+          customerName={formData.customerName || 'Alex Morgan'}
+          customerEmail={formData.customerEmail || 'alex@example.com'}
+          customerPhone={formData.customerPhone || '+91 98765 43210'}
           onPaymentSuccess={handlePaymentPortalSuccess}
         />
       </div>
