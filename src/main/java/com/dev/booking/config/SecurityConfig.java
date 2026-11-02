@@ -105,13 +105,20 @@ public class SecurityConfig {
         if (frontendUrl != null && !frontendUrl.isBlank()) {
             origins.add(frontendUrl);
         }
+        origins.add("https://royal-spice-frontend.vercel.app");
         origins.add("http://localhost:5173");
         origins.add("http://localhost:5174");
         origins.add("http://localhost:3000");
         origins.add("http://127.0.0.1:5173");
 
         configuration.setAllowedOrigins(origins);
-        configuration.setAllowedOriginPatterns(List.of("*"));
+        configuration.setAllowedOriginPatterns(List.of(
+            "https://*.vercel.app",
+            "https://royal-spice-frontend.vercel.app",
+            "http://localhost:*",
+            "http://127.0.0.1:*",
+            "*"
+        ));
 
         configuration.setAllowedMethods(
                 List.of(
@@ -126,10 +133,14 @@ public class SecurityConfig {
         configuration.setAllowedHeaders(
                 List.of(
                     "Authorization",
-                    "Content-Type"
+                    "Content-Type",
+                    "X-Requested-With",
+                    "Accept",
+                    "Origin"
                 )
         );
 
+        configuration.setExposedHeaders(List.of("Authorization", "Content-Type"));
         configuration.setAllowCredentials(false);
 
         UrlBasedCorsConfigurationSource source =
