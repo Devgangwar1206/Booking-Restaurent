@@ -154,6 +154,27 @@ public class ReservationService {
             }
             booking.setCartItems(bookingItems);
             booking.setOrderPreference(!bookingItems.isEmpty() ? "preorder" : "dinein");
+            booking.setPaymentStatus(request.getPaymentStatus() != null ? request.getPaymentStatus() : "PAY_AT_RESTAURANT");
+            booking.setPaymentMethod(request.getPaymentMethod());
+            booking.setTransactionId(request.getTransactionId());
+
+            Double totalAmt = null;
+            if (request.getBillBreakdown() instanceof Map<?, ?> billMap) {
+                Object totalObj = billMap.get("total");
+                if (totalObj instanceof Number n) {
+                    totalAmt = n.doubleValue();
+                } else if (totalObj != null) {
+                    try { totalAmt = Double.parseDouble(totalObj.toString()); } catch (Exception ignored) {}
+                }
+            }
+            if (totalAmt == null && !bookingItems.isEmpty()) {
+                double sum = 0.0;
+                for (BookingItem bi : bookingItems) {
+                    sum += bi.getPrice() * bi.getQuantity();
+                }
+                if (sum > 0) totalAmt = sum;
+            }
+            booking.setTotalAmount(totalAmt);
 
             bookingRepository.save(booking);
             log.info("Saved reservation to Admin Booking table with ID: {}", ref);

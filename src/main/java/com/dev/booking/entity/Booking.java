@@ -29,6 +29,12 @@ public class Booking {
 
 	    private String bookingId;
 	    private LocalDateTime createdAt;
+
+	    // Payment Tracking
+	    private String paymentStatus; // "PAID", "PAY_AT_RESTAURANT"
+	    private String paymentMethod; // "RAZORPAY", "PAY_AT_RESTAURANT"
+	    private String transactionId; // "pay_..."
+	    private Double totalAmount;
 	    
 	    @OneToMany(
 	    	    mappedBy = "booking",
@@ -117,6 +123,33 @@ public class Booking {
 		public void setCreatedAt(LocalDateTime createdAt) {
 			this.createdAt = createdAt;
 		}
-		
 
+		public String getPaymentStatus() {
+			return paymentStatus;
+		}
+		public void setPaymentStatus(String paymentStatus) {
+			this.paymentStatus = paymentStatus;
+		}
+
+		public String getPaymentMethod() {
+			return paymentMethod;
+		}
+		public void setPaymentMethod(String paymentMethod) {
+			this.paymentMethod = paymentMethod;
+		}
+
+		public String getTransactionId() {
+			return transactionId;
+		}
+		public void setTransactionId(String transactionId) {
+			this.transactionId = transactionId;
+		}
+
+		public Double getTotalAmount() {
+			return totalAmount;
+		}
+		public void setTotalAmount(Double totalAmount) {
+			this.totalAmount = totalAmount;
+		}
 }
+

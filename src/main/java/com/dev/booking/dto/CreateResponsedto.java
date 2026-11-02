@@ -32,6 +32,12 @@ public class CreateResponsedto {
     // PRE-ORDER ITEMS
     private List<BookingItemDto> cartItems;
 
+    // Payment Tracking
+    private String paymentStatus;
+    private String paymentMethod;
+    private String transactionId;
+    private Double totalAmount;
+
 
     public Long getId() {
         return id;
@@ -135,5 +141,37 @@ public class CreateResponsedto {
 
     public void setCartItems(List<BookingItemDto> cartItems) {
         this.cartItems = cartItems;
+    }
+
+    public String getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public void setPaymentStatus(String paymentStatus) {
+        this.paymentStatus = paymentStatus;
+    }
+
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(String paymentMethod) {
+        this.paymentMethod = paymentMethod;
+    }
+
+    public String getTransactionId() {
+        return transactionId;
+    }
+
+    public void setTransactionId(String transactionId) {
+        this.transactionId = transactionId;
+    }
+
+    public Double getTotalAmount() {
+        return totalAmount;
+    }
+
+    public void setTotalAmount(Double totalAmount) {
+        this.totalAmount = totalAmount;
     }
 }

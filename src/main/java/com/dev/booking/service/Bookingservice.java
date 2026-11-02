@@ -98,6 +98,9 @@ public class Bookingservice {
 	                        b.setSpecialRequest(res.getSpecialRequests() != null ? res.getSpecialRequests() : "");
 	                        b.setCreatedAt(res.getCreatedAt() != null ? res.getCreatedAt() : LocalDateTime.now());
 	                        b.setOrderPreference("dinein");
+	                        b.setPaymentStatus(res.getPaymentStatus() != null ? res.getPaymentStatus() : "PAY_AT_RESTAURANT");
+	                        b.setPaymentMethod(res.getPaymentMethod());
+	                        b.setTransactionId(res.getTransactionId());
 	                        b.setCartItems(new ArrayList<>());
 	                        bookingrepo.save(b);
 	                    }
@@ -111,6 +114,33 @@ public class Bookingservice {
 	    List<CreateResponsedto> responseList = new ArrayList<>();
 
 	    for (Booking booking : bookings) {
+	        // Backfill payment fields for existing bookings if missing
+	        if (booking.getPaymentStatus() == null && reservationRepository != null && booking.getBookingId() != null) {
+	            try {
+	                reservationRepository.findByBookingReference(booking.getBookingId()).ifPresent(res -> {
+	                    booking.setPaymentStatus(res.getPaymentStatus() != null ? res.getPaymentStatus() : "PAY_AT_RESTAURANT");
+	                    booking.setPaymentMethod(res.getPaymentMethod());
+	                    booking.setTransactionId(res.getTransactionId());
+	                    if (res.getBillBreakdownJson() != null && !res.getBillBreakdownJson().isBlank()) {
+	                        try {
+	                            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+	                            com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(res.getBillBreakdownJson());
+	                            if (root.has("total")) {
+	                                booking.setTotalAmount(root.get("total").asDouble());
+	                            }
+	                        } catch (Exception ignored) {}
+	                    }
+	                    if (booking.getTotalAmount() == null && booking.getCartItems() != null) {
+	                        double sum = 0.0;
+	                        for (BookingItem bi : booking.getCartItems()) {
+	                            sum += bi.getPrice() * bi.getQuantity();
+	                        }
+	                        booking.setTotalAmount(sum);
+	                    }
+	                    bookingrepo.save(booking);
+	                });
+	            } catch (Exception ignored) {}
+	        }
 
 	        responseList.add(maptodto(booking));
 
@@ -233,6 +263,10 @@ public class Bookingservice {
 	    }
 
 	    responseDto.setCartItems(itemDtos);
+	    responseDto.setPaymentStatus(savedBooking.getPaymentStatus());
+	    responseDto.setPaymentMethod(savedBooking.getPaymentMethod());
+	    responseDto.setTransactionId(savedBooking.getTransactionId());
+	    responseDto.setTotalAmount(savedBooking.getTotalAmount());
 
 	    return responseDto;
 	}
