@@ -69,14 +69,21 @@ export function TableHoldProvider({ children }) {
     }
   }, []);
 
-  // Update selectedTable and persist
-  const updateSelectedTable = useCallback((table) => {
-    setSelectedTable(table);
-    if (table) {
-      sessionStorage.setItem('royal_spices_selected_table', JSON.stringify(table));
-    } else {
-      sessionStorage.removeItem('royal_spices_selected_table');
-    }
+  // Update selectedTable and persist (supports both direct value and functional updater)
+  const updateSelectedTable = useCallback((tableOrFn) => {
+    setSelectedTable((prev) => {
+      const next = typeof tableOrFn === 'function' ? tableOrFn(prev) : tableOrFn;
+      if (next && typeof next === 'object') {
+        try {
+          sessionStorage.setItem('royal_spices_selected_table', JSON.stringify(next));
+        } catch (e) {}
+      } else if (!next) {
+        try {
+          sessionStorage.removeItem('royal_spices_selected_table');
+        } catch (e) {}
+      }
+      return next;
+    });
   }, []);
 
   // Release hold on backend and clear local state

@@ -177,6 +177,11 @@ export default function TableReservationWidget({
           bypassCache ? '&refresh=true' : ''
         }`;
         const res = await fetch(url);
+        if (res.status === 429) {
+          console.warn('Rate limited (429). Pausing polling.');
+          return;
+        }
+
         const data = await res.json();
 
         if (data.success && data.tables) {
@@ -187,7 +192,10 @@ export default function TableReservationWidget({
               return available || null;
             }
             const updated = data.tables.find((t) => t.id === prev.id);
-            return updated || prev;
+            if (updated && (updated.status !== prev.status || updated.heldByCurrentSession !== prev.heldByCurrentSession)) {
+              return { ...prev, ...updated };
+            }
+            return prev;
           });
         } else if (!isSilent) {
           setAvailabilityError(data.error || 'Failed to load table availability');
@@ -210,31 +218,22 @@ export default function TableReservationWidget({
   // Initial and parameter change load
   useEffect(() => {
     if (!sessionId) return;
-    // If tables are already loaded, do a smooth silent refresh so UI doesn't blur
     const silent = tables.length > 0;
     refreshAvailability(false, silent);
   }, [sessionId, formData.date, formData.timeSlot, formData.guestCount]);
 
-  // Smart background polling: every 8s ONLY when user is actively on SELECT_TABLE step and tab is visible
+  // Gentle background polling: every 20s ONLY when user is actively picking table and tab is visible
   useEffect(() => {
     if (!sessionId || !isBookingOpen || currentStep !== 'SELECT_TABLE') return;
 
     const interval = setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
-        refreshAvailability(false, true); // Silent background poll
+        refreshAvailability(false, true); // Silent poll
       }
-    }, 8000);
-
-    const onFocus = () => {
-      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
-        refreshAvailability(true, true); // Silent refresh on focus
-      }
-    };
-    window.addEventListener('focus', onFocus);
+    }, 20000);
 
     return () => {
       clearInterval(interval);
-      window.removeEventListener('focus', onFocus);
     };
   }, [sessionId, isBookingOpen, currentStep, refreshAvailability]);
 
