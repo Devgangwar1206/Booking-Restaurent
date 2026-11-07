@@ -531,18 +531,14 @@ export default function FloorPlan({
           <span className="text-stone-400">Main Restaurant Entrance</span>
         </div>
 
-        {/* Non-intrusive Loading Indicator: Only full blur on initial load when no tables exist */}
-        {isLoading && (!tables || tables.length === 0) ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/70 z-20 backdrop-blur-xs rounded-2xl">
-            <div className="w-6 h-6 border-2 border-rose-600 border-t-transparent rounded-full animate-spin mb-1.5" />
-            <p className="text-xs font-bold text-stone-800">Checking live availability...</p>
+        {/* Clear Loading Indicator whenever date/time changes */}
+        {isLoading && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 z-20 backdrop-blur-xs rounded-2xl transition-all">
+            <div className="w-7 h-7 border-3 border-rose-600 border-t-transparent rounded-full animate-spin mb-2" />
+            <p className="text-xs font-bold text-stone-900">Checking availability...</p>
+            <p className="text-[10px] text-stone-500 font-medium">Updating real-time floor plan</p>
           </div>
-        ) : isLoading ? (
-          <div className="absolute top-2.5 right-3 flex items-center gap-1.5 bg-white/95 px-2.5 py-1 rounded-full border border-stone-200/90 shadow-xs z-20 text-[11px] font-medium text-stone-600 pointer-events-none">
-            <div className="w-2.5 h-2.5 border-2 border-rose-600 border-t-transparent rounded-full animate-spin" />
-            <span>Updating...</span>
-          </div>
-        ) : null}
+        )}
 
         {/* SVG Table layout */}
         <div className="relative flex-1 min-h-0 w-full flex items-center justify-center py-1">

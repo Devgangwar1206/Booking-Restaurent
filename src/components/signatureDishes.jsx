@@ -206,25 +206,25 @@ export default function SignatureDishes() {
 
                   {/* Top Badges Row */}
                   <div className="absolute top-3 inset-x-3 flex items-center justify-between pointer-events-none">
-                    {/* Veg / Non-Veg Indicator */}
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold backdrop-blur-md border shadow-xs ${
-                        dish.isVeg
-                          ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'
-                          : 'bg-rose-950/80 text-rose-300 border-rose-500/40'
+                    {/* Veg / Non-Veg Sticker Indicator */}
+                    <div
+                      title={dish.isVeg ? 'Pure Veg' : 'Non-Veg'}
+                      className={`w-6 h-6 rounded-md backdrop-blur-md border-2 flex items-center justify-center shadow-sm bg-white/95 ${
+                        dish.isVeg ? 'border-emerald-600' : 'border-rose-600'
                       }`}
                     >
-                      <span
-                        className={`w-2 h-2 rounded-full ${dish.isVeg ? 'bg-emerald-400' : 'bg-rose-500'}`}
+                      <div
+                        className={`w-2.5 h-2.5 rounded-full ${
+                          dish.isVeg ? 'bg-emerald-600' : 'bg-rose-600'
+                        }`}
                       />
-                      <span>{dish.isVeg ? 'Pure Veg' : 'Non-Veg'}</span>
-                    </span>
+                    </div>
 
-                    {/* Star Rating Badge */}
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-amber-500/90 text-white backdrop-blur-md shadow-xs">
+                    {/* Star Rating Sticker */}
+                    <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-black bg-amber-500 text-white backdrop-blur-md shadow-sm border border-amber-400">
                       <Star className="w-3 h-3 fill-white" />
                       <span>{dish.rating}</span>
-                    </span>
+                    </div>
                   </div>
 
                   {/* Bottom Badges on Image */}
@@ -238,12 +238,6 @@ export default function SignatureDishes() {
                         ₹{dish.price}
                       </span>
                     </div>
-
-                    {/* Quick view tap hint badge */}
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-white bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/20 group-hover:bg-rose-600/90 transition-colors">
-                      <Info className="w-3 h-3" />
-                      <span>Details</span>
-                    </span>
                   </div>
                 </div>
 

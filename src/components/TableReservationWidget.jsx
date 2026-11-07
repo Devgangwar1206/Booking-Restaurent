@@ -155,15 +155,20 @@ export default function TableReservationWidget({
     '8:00 pm',
   ];
 
-  // Mutex ref to prevent overlapping network calls if backend takes time
-  const isFetchingRef = useRef(false);
+  // Abort controller ref and request counter to ensure latest date/time always wins immediately
+  const abortControllerRef = useRef(null);
+  const currentRequestIdRef = useRef(0);
 
   // Fetch Live Table Availability from Backend
-  // isSilent = true suppresses loading spinners/overlays so the floor plan never blurs or flickers
   const refreshAvailability = useCallback(
     async (bypassCache = false, isSilent = false) => {
-      if (isFetchingRef.current) return;
-      isFetchingRef.current = true;
+      // Abort any earlier pending request so newest date/time response arrives immediately
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      const requestId = ++currentRequestIdRef.current;
 
       if (!isSilent) {
         setIsLoadingAvailability(true);
@@ -176,7 +181,7 @@ export default function TableReservationWidget({
         )}&guestCount=${formData.guestCount}&sessionId=${sessionId || ''}${
           bypassCache ? '&refresh=true' : ''
         }`;
-        const res = await fetch(url);
+        const res = await fetch(url, { signal: controller.signal });
         if (res.status === 429) {
           console.warn('Rate limited (429). Pausing polling.');
           return;
@@ -184,7 +189,7 @@ export default function TableReservationWidget({
 
         const data = await res.json();
 
-        if (data.success && data.tables) {
+        if (requestId === currentRequestIdRef.current && data.success && data.tables) {
           setTables(data.tables);
           setSelectedTable((prev) => {
             if (!prev) {
@@ -192,22 +197,26 @@ export default function TableReservationWidget({
               return available || null;
             }
             const updated = data.tables.find((t) => t.id === prev.id);
-            if (updated && (updated.status !== prev.status || updated.heldByCurrentSession !== prev.heldByCurrentSession)) {
+            if (updated) {
+              if (updated.status !== 'AVAILABLE' && !updated.heldByCurrentSession) {
+                const firstAvailable = data.tables.find((t) => t.status === 'AVAILABLE');
+                return firstAvailable || null;
+              }
               return { ...prev, ...updated };
             }
             return prev;
           });
-        } else if (!isSilent) {
+        } else if (requestId === currentRequestIdRef.current && !isSilent) {
           setAvailabilityError(data.error || 'Failed to load table availability');
         }
       } catch (err) {
-        if (!isSilent) {
+        if (err.name === 'AbortError') return;
+        if (!isSilent && requestId === currentRequestIdRef.current) {
           setAvailabilityError(err.message || 'Error connecting to availability service');
           setTables((prev) => (prev.length > 0 ? prev : RESTAURANT_TABLES.map((t) => ({ ...t, status: 'AVAILABLE', suitableForGuests: true }))));
         }
       } finally {
-        isFetchingRef.current = false;
-        if (!isSilent) {
+        if (!isSilent && requestId === currentRequestIdRef.current) {
           setIsLoadingAvailability(false);
         }
       }
@@ -215,11 +224,10 @@ export default function TableReservationWidget({
     [formData.date, formData.timeSlot, formData.guestCount, sessionId]
   );
 
-  // Initial and parameter change load
+  // Initial and parameter change load - ALWAYS show loading immediately on date/time/guest change
   useEffect(() => {
     if (!sessionId) return;
-    const silent = tables.length > 0;
-    refreshAvailability(false, silent);
+    refreshAvailability(false, false);
   }, [sessionId, formData.date, formData.timeSlot, formData.guestCount]);
 
   // Gentle background polling: every 20s ONLY when user is actively picking table and tab is visible
@@ -322,8 +330,18 @@ export default function TableReservationWidget({
       return;
     }
 
-    const customerName = formData.customerName?.trim() || 'Alex Morgan';
-    const customerPhone = formData.customerPhone?.trim() || '+91 98765 43210';
+    const customerName = formData.customerName?.trim();
+    const customerPhone = formData.customerPhone?.trim();
+
+    if (!customerName) {
+      setHoldError('Please enter your name in Primary Contact Details.');
+      return;
+    }
+    if (!customerPhone) {
+      setHoldError('Please enter your mobile phone number in Primary Contact Details.');
+      return;
+    }
+
     setFormData((prev) => ({
       ...prev,
       customerName,
@@ -855,7 +873,7 @@ export default function TableReservationWidget({
                 <User className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder="Your Full Name"
+                  placeholder="Enter your name"
                   value={formData.customerName}
                   onChange={(e) => setFormData((prev) => ({ ...prev, customerName: e.target.value }))}
                   className="w-full pl-10 pr-3 py-2.5 text-xs rounded-xl bg-stone-50 border border-stone-200 hover:border-stone-300 text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-rose-500 transition-all font-medium"
@@ -866,7 +884,7 @@ export default function TableReservationWidget({
                 <Phone className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="tel"
-                  placeholder="Mobile Phone"
+                  placeholder="Enter mobile number"
                   value={formData.customerPhone}
                   onChange={(e) => setFormData((prev) => ({ ...prev, customerPhone: e.target.value }))}
                   className="w-full pl-10 pr-3 py-2.5 text-xs rounded-xl bg-stone-50 border border-stone-200 hover:border-stone-300 text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-rose-500 transition-all font-medium"

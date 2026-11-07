@@ -25,9 +25,9 @@ export default function PaymentPortalModal({
   onClose,
   totalAmount = 1825,
   bookingReference = 'BON-PENDING',
-  customerName = 'Alex Morgan',
-  customerEmail = 'alex@example.com',
-  customerPhone = '+91 98765 43210',
+  customerName = '',
+  customerEmail = '',
+  customerPhone = '',
   onPaymentSuccess,
 }) {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -108,9 +108,9 @@ export default function PaymentPortalModal({
             }
           },
           prefill: {
-            name: customerName || 'Alex Morgan',
-            email: customerEmail || 'guest@example.com',
-            contact: customerPhone || '+91 98765 43210',
+            name: customerName || 'Guest',
+            email: customerEmail || '',
+            contact: customerPhone || '',
           },
           notes: {
             bookingRef: bookingReference,

@@ -53,9 +53,9 @@ export function TableHoldProvider({ children }) {
     date: new Date().toISOString().split('T')[0],
     timeSlot: '11:45 am',
     guestCount: 2,
-    customerName: 'Alex Morgan',
-    customerEmail: 'alex.morgan@example.com',
-    customerPhone: '+91 98765 43210',
+    customerName: '',
+    customerEmail: '',
+    customerPhone: '',
     specialRequests: '',
   }));
 
